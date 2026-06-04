@@ -1,0 +1,59 @@
+name: Fiskl AI Booking Agent
+
+on:
+  schedule:
+    - cron: "15 5 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry Run (keine echten Buchungen)"
+        required: false
+        default: "true"
+        type: choice
+        options: ["true", "false"]
+      booking_date:
+        description: "Buchungsdatum (YYYY-MM-DD, leer = heute)"
+        required: false
+        default: ""
+      client_id:
+        description: "Nur diesen Client (leer = alle)"
+        required: false
+        default: ""
+
+jobs:
+  run-booking-agent:
+    name: Buchungsagent ausfuehren
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Abhaengigkeiten installieren
+        run: pip install -r requirements.txt
+
+      - name: Booking-Agent ausfuehren
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FISKL_CREDENTIALS:  ${{ secrets.FISKL_CREDENTIALS }}
+          SLACK_WEBHOOK_URL:  ${{ secrets.SLACK_WEBHOOK_URL }}
+          DRY_RUN:       ${{ github.event.inputs.dry_run || 'false' }}
+          BOOKING_DATE:  ${{ github.event.inputs.booking_date || '' }}
+          CLIENT_FILTER: ${{ github.event.inputs.client_id || '' }}
+          LOG_LEVEL: "INFO"
+        run: python src/agent.py
+
+      - name: Logs speichern
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: booking-logs-${{ github.run_id }}
+          path: logs/
+          retention-days: 90
