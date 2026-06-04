@@ -1,0 +1,142 @@
+# Fiskl AI Booking Agent — Buchungsregeln
+
+clients:
+  kifi_sandbox:
+    name: "KI Finanz GmbH"
+    environment: sandbox
+    base_url: "https://sandbox.fiskl.ca/api"
+    holder_account_id: 603774
+    currency: EUR
+    active: true
+
+booking_rules:
+
+  - id: payroll
+    name: "Personalkosten"
+    category: "Lohn & Gehalt"
+    frequency: monthly
+    day_of_month: last
+    account_id: 603763
+    account_name: "Payroll - Salary & Wages"
+    amount: 19055.00
+    income: false
+    priority: high
+    description: "Monatliche Personalkosten"
+
+  - id: ag_social
+    name: "AG-Sozialabgaben"
+    category: "Lohn & Gehalt"
+    frequency: monthly
+    day_of_month: last
+    account_id: 603764
+    account_name: "Payroll - Taxes"
+    amount: 3811.00
+    income: false
+    priority: high
+    description: "Arbeitgeberanteil Sozialversicherung"
+
+  - id: rent
+    name: "Miete Buero"
+    category: "Betriebskosten"
+    frequency: monthly
+    day_of_month: 1
+    account_id: 603755
+    account_name: "Lease or Rent"
+    amount: 3500.00
+    income: false
+    priority: high
+    description: "Monatliche Bueromiete"
+
+  - id: bank_charges
+    name: "Stripe-Gebuehren"
+    category: "Betriebskosten"
+    frequency: monthly
+    day_of_month: last
+    account_id: 603739
+    account_name: "Bank Charges"
+    dynamic: true
+    dynamic_formula: "stripe_revenue * 0.014"
+    amount_fallback: 2200.00
+    income: false
+    priority: medium
+    description: "Stripe Transaktionsgebuehren"
+
+  - id: insurance
+    name: "Versicherung"
+    category: "Betriebskosten"
+    frequency: quarterly
+    day_of_month: 15
+    months: [1, 4, 7, 10]
+    account_id: 603741
+    account_name: "Insurance"
+    amount: 1200.00
+    income: false
+    priority: medium
+    description: "Quartalsweise Versicherungspraemie"
+
+  - id: stripe_payout
+    name: "Stripe Payout Services"
+    category: "Einnahmen"
+    frequency: monthly
+    day_of_month: last
+    account_id: 603721
+    account_name: "Sales of Services"
+    dynamic: true
+    dynamic_formula: "stripe_payout_amount"
+    amount_fallback: 190000.00
+    income: true
+    priority: medium
+    description: "Monatlicher Stripe-Umsatz"
+
+  - id: vat_payment
+    name: "USt-Vorauszahlung"
+    category: "Steuern"
+    frequency: monthly
+    day_of_month: 10
+    account_id: 603773
+    account_name: "Sales Tax (000000)"
+    dynamic: true
+    dynamic_formula: "prev_month_revenue * 0.19 * 0.6"
+    amount_fallback: 18500.00
+    income: false
+    priority: high
+    description: "Monatliche USt-Vorauszahlung"
+
+  - id: trade_tax
+    name: "Gewerbesteuer-Vorauszahlung"
+    category: "Steuern"
+    frequency: quarterly
+    day_of_month: 15
+    months: [2, 5, 8, 11]
+    account_id: 603759
+    account_name: "Licenses & Other Taxes"
+    amount: 4350.00
+    income: false
+    priority: medium
+    description: "Quartalsweise Gewerbesteuer"
+
+  - id: depreciation_it
+    name: "Abschreibung IT-Ausstattung"
+    category: "Bilanz"
+    frequency: quarterly
+    day_of_month: last
+    months: [3, 6, 9, 12]
+    account_id: 603685
+    account_name: "Depreciation - Computer Equipment"
+    amount: 2650.00
+    income: false
+    priority: low
+    description: "Quartalsweise Abschreibung IT"
+
+  - id: depreciation_office
+    name: "Abschreibung Bueroausstattung"
+    category: "Bilanz"
+    frequency: quarterly
+    day_of_month: last
+    months: [3, 6, 9, 12]
+    account_id: 603683
+    account_name: "Depreciation - Office Equipment"
+    amount: 1250.00
+    income: false
+    priority: low
+    description: "Quartalsweise Abschreibung Buero"
