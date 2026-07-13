@@ -22,7 +22,7 @@ import sys
 import traceback
 from calendar import monthrange
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -315,7 +315,7 @@ def write_summary(results, client_id, target_date, dry_run):
     data[client_id] = {
         "date": target_date.isoformat(),
         "dry_run": dry_run,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "counts": {
             "booked": len([r for r in results if r.status in ("booked", "dry_run")]),
             "skipped": len([r for r in results if r.status == "skipped"]),
@@ -337,8 +337,33 @@ def main():
 
     config = load_config()
     rules = config["booking_rules"]
-    all_creds = json.loads(os.getenv("FISKL_CREDENTIALS", "{}"))
-    ant_client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+
+    # GitHub Actions setzt nicht konfigurierte Secrets als LEEREN String,
+    # nicht als fehlende Variable — daher explizit auf "leer" pruefen.
+    creds_raw = os.getenv("FISKL_CREDENTIALS", "").strip() or "{}"
+    try:
+        all_creds = json.loads(creds_raw)
+    except json.JSONDecodeError as e:
+        log.critical(
+            "Secret FISKL_CREDENTIALS enthaelt kein gueltiges JSON (%s). "
+            "Bitte pruefen: Settings -> Secrets and variables -> Actions.", e
+        )
+        sys.exit(1)
+    if not all_creds:
+        log.warning(
+            "Secret FISKL_CREDENTIALS ist nicht gesetzt oder leer — "
+            "es koennen keine echten Buchungen erfolgen (nur DRY_RUN)."
+        )
+
+    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    if not api_key:
+        log.critical(
+            "Secret ANTHROPIC_API_KEY ist nicht gesetzt. "
+            "Bitte anlegen unter: Settings -> Secrets and variables -> Actions "
+            "-> New repository secret."
+        )
+        sys.exit(1)
+    ant_client = anthropic.Anthropic(api_key=api_key)
 
     slack_url = os.getenv("SLACK_WEBHOOK_URL", "")
     exit_code = 0
@@ -374,4 +399,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit:
+        raise
+    except Exception:
+        # Sicherstellen, dass unerwartete Fehler auch im Log-Artefakt landen
+        log.critical("Unbehandelter Fehler:\n%s", traceback.format_exc())
+        sys.exit(1)
